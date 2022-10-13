@@ -19,6 +19,11 @@ int semAddress;
 
 void signalHandler(int);
 
+union semun {
+int val;
+struct semid_ds *buf; unsigned short *array;
+};
+
 int main(int argc, char *argv[])
 {
     time_t rawtime;
@@ -89,13 +94,19 @@ int main(int argc, char *argv[])
     union semun arg;
     arg.val = 1;
     semAddress = semget(key1, 1, PERMS | IPC_CREAT);
+    
+    if(semAddress == -1)
     perror("Error semAddress");
 
     int sem = semctl(semAddress, 0, SETVAL, arg.val);
+    if(sem == -1)
     perror("Error sem");
+
     int value = semctl(semAddress, 0, GETVAL);
+    if(value < 0)
     perror("Error value");
-    printf("%d", value);
+
+    printf("Semaphore initialized.\n");
 
     char *args[]={"./slave", ss, n, NULL};
 
@@ -104,16 +115,13 @@ int main(int argc, char *argv[])
     {
         if((fork())==0)
         {  
-            //signal handlers for child processes
-            signal(SIGALRM, signalHandler);
-            signal(SIGINT, signalHandler);
             sprintf(args[2], "%d", i);
             execv(args[0], args);
             perror("Failed");
         }
-        printf("Process #%d has been launched.\n", i);
+        printf("Process #%d has been launched.\n", i+1);
         //writing to logfiles
-        sprintf(string1, "%d", i);
+        sprintf(string1, "%d", i+1);
         strcat(string, string1);
         logfile = fopen(string, "a");
         fputs("Process ", logfile);
@@ -130,6 +138,7 @@ int main(int argc, char *argv[])
     while ((wpid = wait(&status)) > 0);
     //memory deallocation and exit
     semctl(semAddress, 0, IPC_RMID);
+    printf("Semaphore is now destroyed.\n");
     exit(0);
 }
 

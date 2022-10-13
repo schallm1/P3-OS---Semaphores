@@ -19,8 +19,8 @@ int semAddress;
 int main(int argc, char* argv[])
 {   
     //variables
-    struct sembuf wait[0];
-    struct sembuf signal[0];
+    struct sembuf wait[1];
+    struct sembuf signal[1];
     FILE *cstest;
 
     int error;
@@ -38,15 +38,16 @@ int main(int argc, char* argv[])
     //critical section loop
     for(int j = 0; j<3; j++)
     {
-        if (((error = r_semop(semAddress, wait, 1)) == -1) && (i > 1)) 
+        if (((error = r_semop(semAddress, wait, 1)) == -1) && (j > 0)) 
         {
             perror("Child failed to lock semid");
-            return 1; 
+            return error; 
         } 
         
             //writing to critical section
         else if (!error) {
             sleep(1);
+	    printf("Process %d is in critical section.\n", i+1);
             cstest = fopen("cstest", "a");
             fputs("Process ", cstest);
             fprintf(cstest, "%d", i+1);
@@ -57,7 +58,7 @@ int main(int argc, char* argv[])
             if ((error = r_semop(semAddress, signal, 1)) == -1)
             perror("Failed to unlock semid");
     }
-    perror("Last error");
+    printf("Process %d is now closing.", i+1);
     exit(0);
 
 }
